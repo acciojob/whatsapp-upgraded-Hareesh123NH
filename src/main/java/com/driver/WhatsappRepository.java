@@ -22,7 +22,7 @@ public class WhatsappRepository {
         this.senderMap = new HashMap<Message, User>();
         this.adminMap = new HashMap<Group, User>();
         this.userMobile = new HashSet<>();
-        this.customGroupCount = 0;
+        this.customGroupCount = 1;
         this.messageId = 1;
     }
 
