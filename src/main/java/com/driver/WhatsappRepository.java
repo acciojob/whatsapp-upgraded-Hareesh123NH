@@ -119,23 +119,48 @@ public class WhatsappRepository {
         //If user is not the admin, remove the user from the group, remove all its messages from all the databases, and update relevant attributes accordingly.
         //If user is removed successfully, return (the updated number of users in the group + the updated number of messages in group + the updated number of overall messages)
         //your code here
-        if(adminMap.containsValue(user)){
-            throw new Exception("Cannot remove admin");
-        }
-        userMobile.remove(user.getMobile());
-        for(Group gp:groupUserMap.keySet()){
-            if(groupUserMap.get(gp).contains(user)){
-                groupUserMap.get(gp).remove(user);
-                for(Message msg:groupMessageMap.get(gp)){
-                    if(senderMap.get(msg).equals(user)){
-                        senderMap.remove(msg);
-                        groupMessageMap.get(gp).remove(msg);
-                    }
-                }
-                return groupUserMap.get(gp).size()+senderMap.size()+groupMessageMap.get(gp).size();
+        boolean userFound = false;
+        Group userGroup = null;
+
+        // Find the group the user is part of
+        for (Map.Entry<Group, List<User>> entry : groupUserMap.entrySet()) {
+            if (entry.getValue().contains(user)) {
+                userFound = true;
+                userGroup = entry.getKey();
+                break;
             }
         }
-        throw new Exception("User not found");
+
+        if (!userFound) {
+            throw new Exception("User not found");
+        }
+        if (adminMap.get(userGroup).equals(user)) {
+            throw new Exception("Cannot remove admin");
+        }
+
+        // Remove user from the group
+        List<User> users = groupUserMap.get(userGroup);
+        users.remove(user);
+
+        // Collect messages to remove to avoid ConcurrentModificationException
+        List<Message> messagesToRemove = new ArrayList<>();
+        for (Message message : groupMessageMap.get(userGroup)) {
+            if (senderMap.get(message).equals(user)) {
+                messagesToRemove.add(message);
+            }
+        }
+
+        // Remove collected messages
+        for (Message message : messagesToRemove) {
+            senderMap.remove(message);
+            groupMessageMap.get(userGroup).remove(message);
+        }
+
+        // Remove user from userMobile set
+        userMobile.remove(user.getMobile());
+
+        // Return the updated counts
+        return groupUserMap.get(userGroup).size() + groupMessageMap.get(userGroup).size() + senderMap.size();
     }
 
     public String findMessage(Date start, Date end, int K) throws Exception{
